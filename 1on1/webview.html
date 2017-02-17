@@ -1,0 +1,224 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <style type="text/css">
+    
+    .opponent {
+        background:white;
+        color: black;
+        font-family: Verdana;
+        text-align: right;
+    }
+    
+    .myown {
+        background:white;
+        color: #333333;
+        font-family: Verdana;
+        text-align: left;
+    }
+    </style>
+    
+<script>
+
+var FLAGS_DEFAULT=1     //0001 //2^0
+var FLAGS_SENT=2        //0010 //2^1
+var FLAGS_ERROR=4       //0100 //2^2
+var FLAGS_PROPAGATED=8  //1000 //2^3
+
+function twoDigits(value) {
+    if(value < 10) {
+        return '0' + value;
+    }
+    return value;
+}
+function createDiv(operatorIndex,timestamp,flags,txt,deliveryDateStr)
+{
+ 
+    var date = new Date(timestamp);
+    var formattedTime = twoDigits(date.getHours())+ ':' + twoDigits(date.getMinutes());
+    
+    var align=(operatorIndex==1?"left":"right");
+    var sign="";
+    
+    if(flags&FLAGS_SENT) {
+        sign="\u{2713}";//sent
+    }else
+    if(flags&FLAGS_ERROR) {
+        sign="\u{2715}";//not sent
+    }
+    
+    var classStr="";
+    
+    if(operatorIndex==10) {
+        if(deliveryDateStr && deliveryDateStr.length>1) {
+            formattedTime="delivery: "+deliveryDateStr;
+        }
+        classStr="myown";
+    } else {
+        classStr="opponent";
+    }
+    
+    if(txt.includes("#bold")) {
+        txt = "<b>"+txt.replace("#bold", "")+"</b>";
+    }
+    if(txt.includes("#italic")) {
+        txt = "<i>"+txt.replace("#italic", "")+"</i>";
+    }
+    if(txt.includes("#hr")) {
+        txt = "<hr/>"+txt.replace("#hr", "");
+    }
+    
+    if(txt.includes("#h1")) {
+        txt = "<h1>"+txt.replace("#h1", "")+"</h1>";
+    }
+    if(txt.includes("#h2")) {
+        txt = "<h2>"+txt.replace("#h2", "")+"</h2>";
+    }
+    if(txt.includes("#h3")) {
+        txt = "<h3>"+txt.replace("#h3", "")+"</h3>";
+    }
+    if(txt.includes("#pp")) {
+        txt = "<p>"+txt.replace("#pp", "")+"</p>";
+    }
+    if(txt.includes("#shake")) {
+        txt = ""+txt.replace("#shake", "")+"";
+    }
+    
+    var txtDivID=('txt-'+operatorIndex+"-"+timestamp);
+    var timeDivID=(operatorIndex+"-"+timestamp);
+    
+    if(txt.includes("#hide")) {
+        txt = ""+txt.replace("#hide", "")+"";
+        
+        
+        for (var i = 100; i >= 1; i--) {
+            setTimeout("function_opacity('"+txtDivID+"'," + i + ")", (i - 100) * -1 * 100);
+        }
+    }
+    if(txt.includes("#marquee")) {
+        txt = "<marquee>"+txt.replace("#marquee", "")+"</marquee>";
+    }
+    if(txt.includes("#checklist")) {
+        txt = txt.replace("#checklist", "");
+        txt= createChecklist(txt);
+    }
+    txt = urlify(txt);
+    
+    return '<div align="'+align+'" id="'+txtDivID+'" class="'+classStr+'"><font size="3">'+txt+'</font><br><font size="1"><dif id="'+timeDivID+'">'+formattedTime+' '+(sign)+'</dif></font></div>';
+}
+function printCodes(c1,c2)
+{
+    var d1 = document.getElementById("block");
+    if(d1) {
+        d1.insertAdjacentHTML('beforeend', "<div align='left'>Your code:<br>"+c1+"<br>Paired with:<br>"+c2+"</div>");
+    }
+    scrollDown();
+
+}
+
+function function_opacity(fading_div_name,opacity_value, fade_in_or_fade_out) { // fade_in_or_out - 0 = fade in, 1 = fade out
+    var fading_div=fading_div = document.getElementById(fading_div_name);
+    fading_div.style.opacity = opacity_value / 100;
+    fading_div.style.filter = 'alpha(opacity=' + opacity_value + ')';
+}
+
+function urlify(text) {
+    var urlRegex = /(https?:\/\/[^\s]+)/g;
+    return text.replace(urlRegex, function(url) {
+                        return '<a href="' + url + '" target="_blank">' + url + '</a>';
+                        });
+}
+
+function createChecklist(msg)
+{
+    var buffer="";
+    var components=msg.split(",");
+    for(var i=0;i<components.length;i++) {
+        var c=(components[i].trim());
+        if(c.length>0) {
+            if(buffer.length==0) {
+                buffer="<table>";
+            }
+            buffer+='<tr><td><input type="checkbox"></td><td>'+c+'</td></tr>';
+        }
+    }
+    if(buffer.length>0) {
+        buffer+="</table>";
+    }
+    return buffer;
+}
+
+function setFlags(divID,flags)
+{
+    var sign="";
+    if(flags&FLAGS_SENT) {
+        sign=" \u{2713}";//sent
+    }else
+    if(flags&FLAGS_ERROR) {
+        sign=" \u{2715}";//not sent
+    }
+    var d1 = document.getElementById(divID);
+    if(d1) {
+        d1.insertAdjacentHTML('beforeend', sign);
+    }
+}
+/*
+function markAsError(divID)
+{
+    var d1 = document.getElementById(divID);
+    d1.insertAdjacentHTML('beforeend', " \u{2715}"); //U+2713 (10003)
+}
+*/
+function addDiv(operatorIndex,timestamp,flags,txt,deliveryDateStr) {
+    var d1 = document.getElementById('block');
+    d1.insertAdjacentHTML('beforeend', createDiv(operatorIndex,timestamp,flags,txt,deliveryDateStr));
+    scrollDown();
+}
+function addDivList(txtList) {
+    var d1 = document.getElementById('block');
+    var buffer="";
+    var i=0;
+    while(i<txtList.length) {
+        var operatorIndex=txtList[i];
+        var timestamp=txtList[i+1];
+        var flags=txtList[i+2];
+        var msg=txtList[i+3];
+        var deliveryDateStr=txtList[i+4];
+        buffer+=createDiv(operatorIndex,timestamp,flags,msg,deliveryDateStr);
+        i+=5;
+    }
+    d1.insertAdjacentHTML('beforeend', buffer);
+    scrollDown();
+}
+function removeAllDivs()
+{
+    var el = document.getElementById('block');
+    while ( el.firstChild ) {
+        el.removeChild( el.firstChild );
+    }
+}
+function scrollDown()
+{
+    //smoothScroll("bottom");
+    window.scrollTo(0, document.body.scrollHeight || document.documentElement.scrollHeight);
+}
+</script>
+</head>
+<body>
+    
+    <div id="block" class="myown">
+        <font size="3">1on1 messenger successfully paired</font><hr/>
+    </div>
+    <script>
+       /*
+        addDiv(10,(new Date()).getTime()+120000,2,"so i connected you \u{1F63B}  because you're the person i need an extra app for to chat \u{1F60B}");
+        addDiv(10,(new Date()).getTime()+140000,2,"in this app you can make your messages be delivered later","10.10.2017 13:37");
+        addDiv(10,(new Date()).getTime()+160000,2,"i also placed this app on my dashboard, so i can start it faster");
+        addDiv(10,(new Date()).getTime()+170000,2,"<font color='red'>get it?</font>");
+ 
+        addDiv(20,(new Date()).getTime()+180000,2,"yay dont forget to mention lists you can send","");
+        addDiv(20,(new Date()).getTime()+200000,2,"walk doge,get milk,do more stuff,buy things,rate the 1on1 messenger #checklist","");
+        */
+    </script>
+</body>
+</html>
